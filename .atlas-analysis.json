@@ -1,0 +1,78 @@
+{
+  "projectType": "frontend",
+  "projectName": "Gabriel Etchegoyen Portfolio",
+  "projectDescription": "Personal portfolio website for Gabriel Etchegoyen, a Backend Python Developer showcasing projects, skills, and professional experience.",
+  "theme": "palm",
+  "primaryColor": "#00e5a0",
+  "lightColor": "#00b87a",
+  "darkColor": "#0a0c10",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Overview",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "about"
+            ]
+          },
+          {
+            "group": "Portfolio",
+            "pages": [
+              "portfolio/projects",
+              "portfolio/skills",
+              "portfolio/experience"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Projects",
+        "groups": [
+          {
+            "group": "Web Applications",
+            "pages": [
+              "projects/django-suites-hotel",
+              "projects/sisgestra",
+              "projects/vw-phones",
+              "projects/geosanitas"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Resources",
+        "groups": [
+          {
+            "group": "Development",
+            "pages": [
+              "resources/tech-stack",
+              "resources/education",
+              "resources/contact"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Responsive portfolio website with dark theme design",
+    "Interactive terminal-style hero section",
+    "Project showcase with detailed descriptions",
+    "Professional experience and education timeline",
+    "Contact information and downloadable CV",
+    "Project gallery with image carousels"
+  ],
+  "publicApiSurface": [
+    "Hero section with developer profile",
+    "About section with professional background",
+    "Skills section with technical and soft skills",
+    "Projects showcase with GitHub links",
+    "Experience timeline",
+    "Education and certifications",
+    "Contact section with social links",
+    "Project gallery with interactive carousels"
+  ]
+}
