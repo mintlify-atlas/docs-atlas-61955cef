@@ -1,0 +1,569 @@
+---
+title: 'VW Phones'
+description: 'E-commerce platform for smartphones with comprehensive stock management'
+icon: 'mobile-screen'
+---
+
+<Note>
+  **Project Type:** E-Commerce Web Application | **Status:** Completed  
+  **Tech Stack:** Python, Flask, MySQL, HTML, CSS, JavaScript
+</Note>
+
+## Overview
+
+VW Phones is a full-featured e-commerce platform designed for smartphone retail. The application simulates a complete online store experience with robust inventory management, product catalog browsing, and administrative controls for managing stock levels, product information, and sales.
+
+Built with Flask's lightweight framework, the project demonstrates efficient backend architecture for e-commerce operations while maintaining a clean, user-friendly frontend interface.
+
+<CardGroup cols={2}>
+  <Card title="Product Catalog" icon="list">
+    Comprehensive smartphone listings with detailed specifications, images, and pricing
+  </Card>
+  <Card title="Stock Management" icon="warehouse">
+    Real-time inventory tracking with add, update, and remove capabilities
+  </Card>
+  <Card title="Shopping Experience" icon="cart-shopping">
+    Intuitive browsing, filtering, and purchase flow for customers
+  </Card>
+  <Card title="Admin Dashboard" icon="gauge">
+    Powerful backend tools for product management and inventory control
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Customer-Facing Features
+
+<AccordionGroup>
+  <Accordion title="Product Browsing">
+    - Grid-based product catalog with high-quality images
+    - Detailed product pages with full specifications
+    - Multiple product photos per device
+    - Technical specifications display (screen size, camera, storage, etc.)
+    - Price and availability information
+    - Search functionality
+  </Accordion>
+  
+  <Accordion title="Filtering & Search">
+    - Filter by brand (Samsung, Apple, Xiaomi, etc.)
+    - Price range filtering
+    - Storage capacity options
+    - Color availability
+    - In-stock vs. out-of-stock filtering
+    - Quick search by model name
+  </Accordion>
+  
+  <Accordion title="Shopping Cart">
+    - Add products to cart
+    - Quantity adjustment
+    - Real-time price calculation
+    - Stock availability checking
+    - Cart persistence
+    - Checkout flow
+  </Accordion>
+</AccordionGroup>
+
+### Administrative Features
+
+<AccordionGroup>
+  <Accordion title="Inventory Management">
+    - Add new smartphone models to catalog
+    - Update existing product information
+    - Modify pricing and specifications
+    - Set stock quantities
+    - Mark products as featured
+    - Bulk operations support
+    - Delete discontinued models
+  </Accordion>
+  
+  <Accordion title="Stock Control">
+    - Real-time stock level monitoring
+    - Low stock alerts
+    - Stock-in operations (receive inventory)
+    - Stock-out tracking (sales deduction)
+    - Historical stock movement logs
+    - Inventory value calculation
+  </Accordion>
+  
+  <Accordion title="Product Management">
+    - Upload multiple product images
+    - Edit detailed specifications
+    - Manage product categories
+    - Set promotional pricing
+    - Control product visibility
+  </Accordion>
+</AccordionGroup>
+
+## Technology Stack
+
+<CardGroup cols={3}>
+  <Card title="Backend" icon="python">
+    **Flask**
+    
+    Lightweight Python web framework with routing, templating (Jinja2), and form handling
+  </Card>
+  
+  <Card title="Database" icon="database">
+    **MySQL**
+    
+    Relational database with stored procedures for inventory transactions and complex queries
+  </Card>
+  
+  <Card title="Frontend" icon="palette">
+    **HTML/CSS/JS**
+    
+    Responsive design with modern CSS Grid, interactive JavaScript for cart functionality
+  </Card>
+</CardGroup>
+
+## Technical Implementation
+
+### Database Schema
+
+<Tabs>
+  <Tab title="Database Structure">
+    ```sql
+    -- Products table: Core smartphone information
+    CREATE TABLE products (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        model_name VARCHAR(200) NOT NULL,
+        brand VARCHAR(50) NOT NULL,
+        price DECIMAL(10, 2) NOT NULL,
+        description TEXT,
+        screen_size DECIMAL(3, 1),
+        storage_capacity INT,
+        ram INT,
+        camera_mp VARCHAR(50),
+        battery_mah INT,
+        color VARCHAR(50),
+        stock_quantity INT DEFAULT 0,
+        featured BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+    
+    -- Product images table: Multiple photos per device
+    CREATE TABLE product_images (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        product_id INT NOT NULL,
+        image_url VARCHAR(500) NOT NULL,
+        is_primary BOOLEAN DEFAULT FALSE,
+        display_order INT DEFAULT 0,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+    );
+    
+    -- Inventory transactions: Stock movement history
+    CREATE TABLE inventory_transactions (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        product_id INT NOT NULL,
+        transaction_type ENUM('stock_in', 'stock_out', 'adjustment'),
+        quantity INT NOT NULL,
+        reason VARCHAR(200),
+        user_id INT,
+        transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+    );
+    
+    -- Shopping cart
+    CREATE TABLE cart_items (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        session_id VARCHAR(100) NOT NULL,
+        product_id INT NOT NULL,
+        quantity INT DEFAULT 1,
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (product_id) REFERENCES products(id)
+    );
+    ```
+  </Tab>
+  
+  <Tab title="Key Queries">
+    ```sql
+    -- Get available products with main image
+    SELECT p.*, pi.image_url as main_image
+    FROM products p
+    LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = TRUE
+    WHERE p.stock_quantity > 0
+    ORDER BY p.featured DESC, p.created_at DESC;
+    
+    -- Filter products by criteria
+    SELECT * FROM products
+    WHERE brand = 'Samsung'
+    AND price BETWEEN 200 AND 800
+    AND storage_capacity >= 128
+    AND stock_quantity > 0;
+    
+    -- Update stock after sale
+    UPDATE products
+    SET stock_quantity = stock_quantity - ?
+    WHERE id = ? AND stock_quantity >= ?;
+    
+    -- Get inventory value
+    SELECT SUM(price * stock_quantity) as total_inventory_value
+    FROM products;
+    
+    -- Low stock alert
+    SELECT model_name, brand, stock_quantity
+    FROM products
+    WHERE stock_quantity < 5 AND stock_quantity > 0
+    ORDER BY stock_quantity ASC;
+    ```
+  </Tab>
+  
+  <Tab title="Stored Procedures">
+    ```sql
+    -- Stored procedure for stock adjustment with logging
+    DELIMITER //
+    CREATE PROCEDURE adjust_stock(
+        IN p_product_id INT,
+        IN p_quantity INT,
+        IN p_transaction_type VARCHAR(20),
+        IN p_reason VARCHAR(200)
+    )
+    BEGIN
+        DECLARE current_stock INT;
+        
+        -- Start transaction
+        START TRANSACTION;
+        
+        -- Get current stock
+        SELECT stock_quantity INTO current_stock
+        FROM products
+        WHERE id = p_product_id
+        FOR UPDATE;
+        
+        -- Validate stock availability for stock_out
+        IF p_transaction_type = 'stock_out' AND current_stock < p_quantity THEN
+            SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Insufficient stock';
+        END IF;
+        
+        -- Update stock quantity
+        IF p_transaction_type = 'stock_in' THEN
+            UPDATE products
+            SET stock_quantity = stock_quantity + p_quantity
+            WHERE id = p_product_id;
+        ELSE
+            UPDATE products
+            SET stock_quantity = stock_quantity - p_quantity
+            WHERE id = p_product_id;
+        END IF;
+        
+        -- Log transaction
+        INSERT INTO inventory_transactions
+        (product_id, transaction_type, quantity, reason)
+        VALUES (p_product_id, p_transaction_type, p_quantity, p_reason);
+        
+        COMMIT;
+    END //
+    DELIMITER ;
+    ```
+  </Tab>
+</Tabs>
+
+### Flask Application Structure
+
+<Tabs>
+  <Tab title="Routes">
+    ```python
+    from flask import Flask, render_template, request, redirect, url_for, session
+    from flask_mysqldb import MySQL
+    
+    app = Flask(__name__)
+    mysql = MySQL(app)
+    
+    @app.route('/')
+    def index():
+        """Homepage with featured products"""
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            SELECT p.*, pi.image_url
+            FROM products p
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE p.featured = 1 AND p.stock_quantity > 0
+            LIMIT 6
+        ''')
+        featured_products = cursor.fetchall()
+        cursor.close()
+        return render_template('index.html', products=featured_products)
+    
+    @app.route('/catalog')
+    def catalog():
+        """Product catalog with filters"""
+        brand = request.args.get('brand', '')
+        min_price = request.args.get('min_price', 0)
+        max_price = request.args.get('max_price', 99999)
+        
+        query = '''
+            SELECT p.*, pi.image_url
+            FROM products p
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE p.stock_quantity > 0
+            AND p.price BETWEEN %s AND %s
+        '''
+        params = [min_price, max_price]
+        
+        if brand:
+            query += ' AND p.brand = %s'
+            params.append(brand)
+            
+        query += ' ORDER BY p.brand, p.model_name'
+        
+        cursor = mysql.connection.cursor()
+        cursor.execute(query, params)
+        products = cursor.fetchall()
+        cursor.close()
+        
+        return render_template('catalog.html', products=products)
+    
+    @app.route('/product/<int:product_id>')
+    def product_detail(product_id):
+        """Detailed product page"""
+        cursor = mysql.connection.cursor()
+        
+        # Get product details
+        cursor.execute('SELECT * FROM products WHERE id = %s', [product_id])
+        product = cursor.fetchone()
+        
+        # Get all images
+        cursor.execute('''
+            SELECT image_url FROM product_images
+            WHERE product_id = %s
+            ORDER BY display_order
+        ''', [product_id])
+        images = cursor.fetchall()
+        
+        cursor.close()
+        return render_template('product.html', product=product, images=images)
+    
+    @app.route('/admin/inventory')
+    def admin_inventory():
+        """Admin inventory management"""
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            SELECT id, model_name, brand, price, stock_quantity
+            FROM products
+            ORDER BY brand, model_name
+        ''')
+        products = cursor.fetchall()
+        cursor.close()
+        return render_template('admin/inventory.html', products=products)
+    
+    @app.route('/admin/product/add', methods=['GET', 'POST'])
+    def admin_add_product():
+        """Add new product"""
+        if request.method == 'POST':
+            cursor = mysql.connection.cursor()
+            cursor.execute('''
+                INSERT INTO products
+                (model_name, brand, price, description, screen_size,
+                 storage_capacity, ram, camera_mp, battery_mah, color, stock_quantity)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', [
+                request.form['model_name'],
+                request.form['brand'],
+                request.form['price'],
+                request.form['description'],
+                request.form['screen_size'],
+                request.form['storage_capacity'],
+                request.form['ram'],
+                request.form['camera_mp'],
+                request.form['battery_mah'],
+                request.form['color'],
+                request.form['stock_quantity']
+            ])
+            mysql.connection.commit()
+            cursor.close()
+            return redirect(url_for('admin_inventory'))
+        
+        return render_template('admin/add_product.html')
+    ```
+  </Tab>
+  
+  <Tab title="Stock Management">
+    ```python
+    @app.route('/admin/stock/adjust/<int:product_id>', methods=['POST'])
+    def adjust_stock(product_id):
+        """Adjust product stock levels"""
+        quantity = int(request.form['quantity'])
+        transaction_type = request.form['transaction_type']
+        reason = request.form.get('reason', '')
+        
+        cursor = mysql.connection.cursor()
+        
+        try:
+            # Call stored procedure
+            cursor.callproc('adjust_stock', [
+                product_id,
+                quantity,
+                transaction_type,
+                reason
+            ])
+            mysql.connection.commit()
+            
+            flash('Stock adjusted successfully', 'success')
+        except Exception as e:
+            mysql.connection.rollback()
+            flash(f'Error adjusting stock: {str(e)}', 'error')
+        finally:
+            cursor.close()
+        
+        return redirect(url_for('admin_inventory'))
+    
+    @app.route('/admin/stock/low-stock')
+    def low_stock_report():
+        """View products with low stock"""
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            SELECT model_name, brand, stock_quantity, price
+            FROM products
+            WHERE stock_quantity < 5 AND stock_quantity > 0
+            ORDER BY stock_quantity ASC
+        ''')
+        low_stock_items = cursor.fetchall()
+        cursor.close()
+        
+        return render_template('admin/low_stock.html', items=low_stock_items)
+    ```
+  </Tab>
+  
+  <Tab title="Cart Management">
+    ```python
+    @app.route('/cart/add/<int:product_id>', methods=['POST'])
+    def add_to_cart(product_id):
+        """Add product to shopping cart"""
+        quantity = int(request.form.get('quantity', 1))
+        
+        # Get or create session ID
+        if 'session_id' not in session:
+            import uuid
+            session['session_id'] = str(uuid.uuid4())
+        
+        cursor = mysql.connection.cursor()
+        
+        # Check stock availability
+        cursor.execute(
+            'SELECT stock_quantity FROM products WHERE id = %s',
+            [product_id]
+        )
+        result = cursor.fetchone()
+        
+        if result and result[0] >= quantity:
+            # Add to cart or update quantity
+            cursor.execute('''
+                INSERT INTO cart_items (session_id, product_id, quantity)
+                VALUES (%s, %s, %s)
+                ON DUPLICATE KEY UPDATE quantity = quantity + %s
+            ''', [session['session_id'], product_id, quantity, quantity])
+            mysql.connection.commit()
+            flash('Product added to cart', 'success')
+        else:
+            flash('Insufficient stock', 'error')
+        
+        cursor.close()
+        return redirect(url_for('product_detail', product_id=product_id))
+    
+    @app.route('/cart')
+    def view_cart():
+        """View shopping cart"""
+        if 'session_id' not in session:
+            return render_template('cart.html', items=[], total=0)
+        
+        cursor = mysql.connection.cursor()
+        cursor.execute('''
+            SELECT p.id, p.model_name, p.brand, p.price,
+                   ci.quantity, (p.price * ci.quantity) as subtotal,
+                   pi.image_url
+            FROM cart_items ci
+            JOIN products p ON ci.product_id = p.id
+            LEFT JOIN product_images pi ON p.id = pi.product_id AND pi.is_primary = 1
+            WHERE ci.session_id = %s
+        ''', [session['session_id']])
+        items = cursor.fetchall()
+        
+        total = sum(item[5] for item in items)  # Sum of subtotals
+        
+        cursor.close()
+        return render_template('cart.html', items=items, total=total)
+    ```
+  </Tab>
+</Tabs>
+
+## User Interface
+
+<CardGroup cols={2}>
+  <Card title="Product Grid" icon="grid">
+    Responsive grid layout with product cards showing images, prices, and quick add-to-cart buttons
+  </Card>
+  <Card title="Detailed Views" icon="magnifying-glass">
+    Full product pages with image gallery, specifications table, and stock availability
+  </Card>
+  <Card title="Admin Dashboard" icon="screwdriver-wrench">
+    Tabular inventory view with inline editing, bulk actions, and quick stock adjustments
+  </Card>
+  <Card title="Mobile Optimized" icon="mobile">
+    Fully responsive design that works seamlessly on smartphones and tablets
+  </Card>
+</CardGroup>
+
+## Project Gallery
+
+The project includes **9 detailed screenshots** featuring:
+
+- Homepage with featured smartphones
+- Full product catalog grid
+- Individual product detail pages
+- Image galleries for each device
+- Shopping cart interface
+- Admin inventory management panel
+- Stock adjustment forms
+- Low stock alerts dashboard
+- Mobile responsive views
+
+## Links & Resources
+
+<Card title="View on GitHub" icon="github" href="https://github.com/Gabriel071185/Tienda_celulares">
+  Access the complete source code, database schema, and setup instructions
+</Card>
+
+## Technical Highlights
+
+<Steps>
+  <Step title="Database Design">
+    Normalized schema with proper foreign key relationships, indexing on frequently queried columns for performance, and stored procedures for complex transactions.
+  </Step>
+  
+  <Step title="Inventory Accuracy">
+    Implemented transaction-safe stock management using MySQL's ACID properties, preventing overselling through row-level locking during checkout.
+  </Step>
+  
+  <Step title="Image Management">
+    Multi-image support per product with primary image designation and display ordering for optimal presentation.
+  </Step>
+  
+  <Step title="Admin Tools">
+    Built comprehensive administrative interface for product lifecycle management from addition through discontinuation.
+  </Step>
+</Steps>
+
+<Warning>
+  **Key Challenge Solved:** Preventing race conditions in stock management when multiple users attempt to purchase the last available item simultaneously, using database-level locking mechanisms.
+</Warning>
+
+## Learning Outcomes
+
+This project demonstrates proficiency in:
+
+- Flask framework and routing patterns
+- MySQL database design and optimization
+- E-commerce business logic implementation
+- Inventory management systems
+- Shopping cart functionality
+- Form handling and validation
+- Image upload and management
+- Responsive web design
+- Transaction management and data integrity
+- SQL stored procedures
+
+<Tip>
+  VW Phones showcases the complete e-commerce stack from frontend product browsing to backend inventory management, with emphasis on data consistency and user experience.
+</Tip>

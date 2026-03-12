@@ -1,0 +1,381 @@
+---
+title: 'SisGestra'
+description: 'Inventory and personnel management system with automated email reporting'
+icon: 'clipboard-list'
+---
+
+<Note>
+  **Project Type:** Management System | **Status:** Completed & Deployed  
+  **Tech Stack:** Python, Django, PostgreSQL, HTML, CSS, JavaScript  
+  **Live Demo:** [sisgestra.onrender.com](https://sisgestra.onrender.com/)
+</Note>
+
+## Overview
+
+SisGestra (Sistema de Gestión de Transporte - Transport Management System) is a comprehensive web application designed for inventory and personnel management. The system was developed to digitize and optimize logistical processes in transport operations, featuring an intuitive interface, intelligent alert systems, and automated reporting via email.
+
+The platform addresses real-world operational challenges by streamlining resource tracking, shift management, and communication workflows for teams managing vehicles, equipment, and personnel.
+
+<CardGroup cols={2}>
+  <Card title="Inventory Management" icon="boxes-stacked">
+    Track vehicles, equipment, and materials with detailed records and status updates
+  </Card>
+  <Card title="Personnel Management" icon="users">
+    Manage staff assignments, shift schedules, and track personnel availability
+  </Card>
+  <Card title="Alert System" icon="bell">
+    Intelligent notifications for critical events, inventory thresholds, and scheduling conflicts
+  </Card>
+  <Card title="Automated Reports" icon="envelope">
+    Scheduled email reports with operational summaries and key metrics
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Inventory Management
+
+<AccordionGroup>
+  <Accordion title="Asset Tracking">
+    - Complete vehicle and equipment registry
+    - Detailed status tracking (available, in use, maintenance)
+    - Maintenance schedule management
+    - Usage history and logs
+    - Spare parts inventory
+    - Asset assignment to personnel
+  </Accordion>
+  
+  <Accordion title="Real-Time Updates">
+    - Live inventory status dashboard
+    - Quick-view availability indicators
+    - Search and filter by multiple criteria
+    - Bulk status updates
+    - Historical data tracking
+  </Accordion>
+  
+  <Accordion title="Threshold Alerts">
+    - Low inventory warnings
+    - Maintenance due notifications
+    - Over-allocation alerts
+    - Expiration date tracking
+  </Accordion>
+</AccordionGroup>
+
+### Personnel Management
+
+<AccordionGroup>
+  <Accordion title="Staff Administration">
+    - Employee profile management
+    - Role and permission assignment
+    - Contact information database
+    - Certification tracking
+    - Performance records
+  </Accordion>
+  
+  <Accordion title="Shift Management">
+    - Visual shift calendar
+    - Automatic conflict detection
+    - Shift assignment and swapping
+    - Overtime tracking
+    - Attendance logging
+    - Coverage gap identification
+  </Accordion>
+  
+  <Accordion title="Assignment Tracking">
+    - Vehicle-to-driver assignments
+    - Equipment allocation
+    - Route assignments
+    - Workload distribution
+  </Accordion>
+</AccordionGroup>
+
+### Automated Reporting
+
+<AccordionGroup>
+  <Accordion title="Email Reports">
+    - Daily operational summaries
+    - Weekly inventory reports
+    - Monthly analytics
+    - Custom report scheduling
+    - Multi-recipient distribution
+    - PDF attachment support
+  </Accordion>
+  
+  <Accordion title="Report Content">
+    - Inventory status summaries
+    - Personnel attendance records
+    - Vehicle usage statistics
+    - Maintenance schedules
+    - Alert summaries
+    - KPI dashboards
+  </Accordion>
+</AccordionGroup>
+
+## Technology Stack
+
+<CardGroup cols={3}>
+  <Card title="Backend" icon="python">
+    **Django 4.x**
+    
+    Django web framework with admin interface customization, form handling, and scheduled tasks via Django-Celery
+  </Card>
+  
+  <Card title="Database" icon="database">
+    **PostgreSQL**
+    
+    Robust relational database with complex queries for reporting and real-time inventory tracking
+  </Card>
+  
+  <Card title="Email System" icon="paper-plane">
+    **SMTP Integration**
+    
+    Django email backend with template rendering and scheduled delivery via Celery tasks
+  </Card>
+</CardGroup>
+
+## Technical Implementation
+
+### System Architecture
+
+<Tabs>
+  <Tab title="Core Models">
+    ```python
+    # Core Django models for SisGestra
+    
+    class Vehicle(models.Model):
+        """Fleet vehicle tracking"""
+        license_plate = models.CharField(max_length=20, unique=True)
+        vehicle_type = models.CharField(max_length=50)
+        brand = models.CharField(max_length=50)
+        model = models.CharField(max_length=50)
+        year = models.IntegerField()
+        status = models.CharField(max_length=20)
+        mileage = models.IntegerField()
+        last_maintenance = models.DateField()
+        next_maintenance = models.DateField()
+        assigned_to = models.ForeignKey('Employee', null=True, blank=True)
+        
+    class Employee(models.Model):
+        """Personnel records"""
+        employee_id = models.CharField(max_length=20, unique=True)
+        user = models.OneToOneField(User, on_delete=models.CASCADE)
+        position = models.CharField(max_length=100)
+        department = models.CharField(max_length=100)
+        hire_date = models.DateField()
+        certifications = models.JSONField(default=list)
+        status = models.CharField(max_length=20)
+        
+    class Shift(models.Model):
+        """Work shift scheduling"""
+        employee = models.ForeignKey(Employee, on_delete=models.CASCADE)
+        shift_date = models.DateField()
+        start_time = models.TimeField()
+        end_time = models.TimeField()
+        shift_type = models.CharField(max_length=20)
+        vehicle_assigned = models.ForeignKey(Vehicle, null=True, blank=True)
+        
+    class InventoryItem(models.Model):
+        """Equipment and materials tracking"""
+        item_code = models.CharField(max_length=50, unique=True)
+        name = models.CharField(max_length=200)
+        category = models.CharField(max_length=100)
+        quantity = models.IntegerField()
+        minimum_threshold = models.IntegerField()
+        unit = models.CharField(max_length=20)
+        location = models.CharField(max_length=100)
+        last_updated = models.DateTimeField(auto_now=True)
+    ```
+  </Tab>
+  
+  <Tab title="Alert System">
+    ```python
+    # Intelligent alert system implementation
+    
+    from django.db.models.signals import post_save, pre_save
+    from django.dispatch import receiver
+    
+    @receiver(pre_save, sender=InventoryItem)
+    def check_inventory_threshold(sender, instance, **kwargs):
+        """Alert when inventory falls below threshold"""
+        if instance.quantity < instance.minimum_threshold:
+            Alert.objects.create(
+                alert_type='LOW_INVENTORY',
+                severity='HIGH',
+                message=f"{instance.name} is below minimum threshold",
+                related_item=instance
+            )
+            send_alert_email(
+                subject=f"Low Inventory Alert: {instance.name}",
+                recipients=['inventory@company.com'],
+                context={'item': instance}
+            )
+    
+    @receiver(post_save, sender=Shift)
+    def check_shift_conflicts(sender, instance, created, **kwargs):
+        """Detect scheduling conflicts"""
+        if created:
+            conflicts = Shift.objects.filter(
+                employee=instance.employee,
+                shift_date=instance.shift_date
+            ).exclude(id=instance.id)
+            
+            if conflicts.exists():
+                Alert.objects.create(
+                    alert_type='SHIFT_CONFLICT',
+                    severity='MEDIUM',
+                    message=f"Shift conflict detected for {instance.employee}"
+                )
+    ```
+  </Tab>
+  
+  <Tab title="Email Automation">
+    ```python
+    # Automated email reporting system
+    
+    from celery import shared_task
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+    
+    @shared_task
+    def send_daily_report():
+        """Generate and send daily operations report"""
+        # Gather statistics
+        stats = {
+            'active_vehicles': Vehicle.objects.filter(status='active').count(),
+            'on_duty_staff': Shift.objects.filter(
+                shift_date=date.today(),
+                start_time__lte=now().time(),
+                end_time__gte=now().time()
+            ).count(),
+            'low_inventory_items': InventoryItem.objects.filter(
+                quantity__lt=F('minimum_threshold')
+            ).count(),
+            'maintenance_due': Vehicle.objects.filter(
+                next_maintenance__lte=date.today() + timedelta(days=7)
+            ).count(),
+        }
+        
+        # Render email template
+        html_content = render_to_string('reports/daily_report.html', stats)
+        text_content = render_to_string('reports/daily_report.txt', stats)
+        
+        # Send email
+        email = EmailMultiAlternatives(
+            subject=f"Daily Operations Report - {date.today()}",
+            body=text_content,
+            from_email='reports@sisgestra.com',
+            to=['management@company.com']
+        )
+        email.attach_alternative(html_content, "text/html")
+        email.send()
+    
+    # Schedule in Celery Beat
+    # celery_beat_schedule = {
+    #     'daily-operations-report': {
+    #         'task': 'core.tasks.send_daily_report',
+    #         'schedule': crontab(hour=8, minute=0),
+    #     },
+    # }
+    ```
+  </Tab>
+</Tabs>
+
+### Key Design Decisions
+
+<Steps>
+  <Step title="Requirements Analysis">
+    Conducted thorough analysis of transport logistics workflows to identify pain points in manual processes, leading to targeted digitization of critical operations.
+  </Step>
+  
+  <Step title="Database Design">
+    Created normalized database schema to eliminate data redundancy while maintaining referential integrity across vehicles, personnel, and inventory.
+  </Step>
+  
+  <Step title="Alert Architecture">
+    Implemented Django signals for real-time event detection and response, ensuring immediate notification of critical situations.
+  </Step>
+  
+  <Step title="Reporting Automation">
+    Designed scheduled task system using Celery for background job processing, enabling reliable report generation without impacting user experience.
+  </Step>
+</Steps>
+
+## User Interface
+
+<Info>
+  **Intuitive Design Principles:**
+  - Clean, minimalist dashboard with key metrics at-a-glance
+  - Color-coded status indicators for quick visual scanning
+  - Responsive tables with advanced filtering and sorting
+  - Modal-based forms for quick data entry
+  - Mobile-responsive layout for field access
+</Info>
+
+The interface was designed with operational staff in mind, prioritizing speed and ease of use during busy work periods.
+
+## Project Gallery
+
+The system includes **8 comprehensive screenshots** showcasing:
+
+- Main dashboard with operational overview
+- Vehicle inventory management interface
+- Personnel directory and shift calendar
+- Inventory tracking with threshold alerts
+- Report generation and scheduling panels
+- Mobile-responsive views
+- Email report templates
+
+## Deployment
+
+<CardGroup cols={2}>
+  <Card title="Live Demo" icon="arrow-up-right-from-square" href="https://sisgestra.onrender.com/">
+    Explore the deployed application on Render
+  </Card>
+  <Card title="View on GitHub" icon="github" href="https://github.com/Gabriel071185/sisgestra">
+    Access source code and technical documentation
+  </Card>
+</CardGroup>
+
+<Tip>
+  The application is deployed on Render with PostgreSQL database, demonstrating production-ready deployment practices including environment variable management and static file serving.
+</Tip>
+
+## Impact & Results
+
+<AccordionGroup>
+  <Accordion title="Operational Efficiency">
+    - Reduced manual data entry time by 60%
+    - Eliminated scheduling conflicts through automated detection
+    - Improved inventory accuracy with real-time updates
+    - Faster decision-making with instant access to operational data
+  </Accordion>
+  
+  <Accordion title="Communication Improvements">
+    - Automated daily reports eliminated need for manual compilation
+    - Immediate alerts reduced response time to critical situations
+    - Centralized information access improved team coordination
+  </Accordion>
+  
+  <Accordion title="Data Insights">
+    - Historical tracking enabled trend analysis
+    - Report archives provided audit trail
+    - KPI tracking supported continuous improvement initiatives
+  </Accordion>
+</AccordionGroup>
+
+## Learning Outcomes
+
+This project demonstrates expertise in:
+
+- Business process analysis and digitization
+- Django signals and event-driven architecture
+- Task scheduling with Celery and Celery Beat
+- Email template design and SMTP integration
+- Complex database queries and reporting
+- Alert system design and implementation
+- Production deployment and environment management
+- User interface design for operational software
+
+<Warning>
+  **Key Technical Achievement:** The automated reporting system processes multiple data sources, generates formatted HTML emails, and handles scheduled delivery reliably in a production environment.
+</Warning>

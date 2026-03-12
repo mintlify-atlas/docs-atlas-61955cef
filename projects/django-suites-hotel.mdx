@@ -1,0 +1,280 @@
+---
+title: 'Django Suites Hotel'
+description: 'Hotel reservation and room service management system built with Django'
+icon: 'hotel'
+---
+
+<Note>
+  **Project Type:** Web Application | **Status:** Completed  
+  **Tech Stack:** Python, Django, PostgreSQL, HTML, CSS, JavaScript
+</Note>
+
+## Overview
+
+Django Suites Hotel is a comprehensive web platform designed for hotel reservation, administration, and room service management. This project showcases a full-featured hotel management system with a focus on user experience and operational efficiency.
+
+The application provides both guest-facing and administrative interfaces, enabling seamless booking experiences while giving hotel staff powerful tools to manage reservations, room availability, and service requests.
+
+<CardGroup cols={2}>
+  <Card title="Reservation System" icon="calendar-check">
+    Complete booking flow with real-time room availability checking and instant confirmation
+  </Card>
+  <Card title="Room Management" icon="bed">
+    Comprehensive room administration with status tracking, pricing, and availability management
+  </Card>
+  <Card title="Room Service" icon="concierge-bell">
+    Integrated room service ordering system for guests with kitchen/staff notification
+  </Card>
+  <Card title="Guest Dashboard" icon="user">
+    Personalized guest portal to view reservations, make requests, and manage services
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Guest Features
+
+<AccordionGroup>
+  <Accordion title="Online Reservations">
+    - Browse available rooms by date range
+    - View detailed room information, amenities, and photos
+    - Real-time availability checking
+    - Instant booking confirmation
+    - Reservation modification and cancellation
+  </Accordion>
+  
+  <Accordion title="Room Service Ordering">
+    - Browse restaurant menu items
+    - Place orders directly to rooms
+    - Track order status in real-time
+    - View order history
+  </Accordion>
+  
+  <Accordion title="Guest Portal">
+    - View current and past reservations
+    - Manage profile information
+    - Access booking receipts and invoices
+    - Submit special requests
+  </Accordion>
+</AccordionGroup>
+
+### Administrative Features
+
+<AccordionGroup>
+  <Accordion title="Reservation Management">
+    - Dashboard with all active reservations
+    - Check-in/check-out workflow
+    - Reservation search and filtering
+    - Payment tracking and billing
+    - Occupancy reports and analytics
+  </Accordion>
+  
+  <Accordion title="Room Administration">
+    - Add, edit, and remove room listings
+    - Set pricing and seasonal rates
+    - Manage room status (available, occupied, maintenance)
+    - Upload and manage room photos
+    - Configure room amenities
+  </Accordion>
+  
+  <Accordion title="Service Management">
+    - Process room service orders
+    - Update order status (preparing, delivered)
+    - Menu management (add/edit items)
+    - Kitchen notification system
+  </Accordion>
+</AccordionGroup>
+
+## Technology Stack
+
+<CardGroup cols={3}>
+  <Card title="Backend" icon="python">
+    **Django 4.x**
+    
+    Django web framework with MVT architecture, ORM for database operations, and Django's built-in authentication system
+  </Card>
+  
+  <Card title="Database" icon="database">
+    **PostgreSQL**
+    
+    Relational database for storing reservations, room data, user accounts, and service orders with data integrity
+  </Card>
+  
+  <Card title="Frontend" icon="code">
+    **HTML/CSS/JS**
+    
+    Responsive UI built with modern HTML5, CSS3, and vanilla JavaScript for interactive features
+  </Card>
+</CardGroup>
+
+## Technical Implementation
+
+### Database Architecture
+
+The application uses a carefully designed relational database schema with the following core models:
+
+<Tabs>
+  <Tab title="Models Overview">
+    ```python
+    # Core Django models
+    
+    class Room(models.Model):
+        """Hotel room with all details and pricing"""
+        room_number = models.CharField(max_length=10, unique=True)
+        room_type = models.CharField(max_length=50)
+        capacity = models.IntegerField()
+        price_per_night = models.DecimalField(max_digits=8, decimal_places=2)
+        description = models.TextField()
+        amenities = models.JSONField()
+        status = models.CharField(max_length=20)
+        
+    class Reservation(models.Model):
+        """Guest booking records"""
+        guest = models.ForeignKey(User, on_delete=models.CASCADE)
+        room = models.ForeignKey(Room, on_delete=models.CASCADE)
+        check_in_date = models.DateField()
+        check_out_date = models.DateField()
+        total_price = models.DecimalField(max_digits=10, decimal_places=2)
+        status = models.CharField(max_length=20)
+        
+    class RoomServiceOrder(models.Model):
+        """Room service requests from guests"""
+        reservation = models.ForeignKey(Reservation, on_delete=models.CASCADE)
+        order_items = models.JSONField()
+        order_time = models.DateTimeField(auto_now_add=True)
+        status = models.CharField(max_length=20)
+        total_amount = models.DecimalField(max_digits=8, decimal_places=2)
+    ```
+  </Tab>
+  
+  <Tab title="Relationships">
+    The database implements several key relationships:
+    
+    - **User → Reservation**: One-to-many (guests can have multiple reservations)
+    - **Room → Reservation**: One-to-many (rooms can be booked multiple times)
+    - **Reservation → RoomServiceOrder**: One-to-many (orders tied to specific reservations)
+    - **Room → Images**: One-to-many (multiple photos per room)
+    
+    These relationships ensure data integrity and enable complex queries like:
+    - Finding all reservations for a specific date range
+    - Calculating room occupancy rates
+    - Tracking guest spending on services
+  </Tab>
+  
+  <Tab title="Queries">
+    ```python
+    # Example: Check room availability
+    def check_availability(room_id, check_in, check_out):
+        overlapping = Reservation.objects.filter(
+            room_id=room_id,
+            status__in=['confirmed', 'checked_in'],
+            check_out_date__gt=check_in,
+            check_in_date__lt=check_out
+        ).exists()
+        return not overlapping
+        
+    # Example: Calculate total revenue
+    def get_monthly_revenue(year, month):
+        return Reservation.objects.filter(
+            check_in_date__year=year,
+            check_in_date__month=month,
+            status='completed'
+        ).aggregate(total=Sum('total_price'))['total']
+    ```
+  </Tab>
+</Tabs>
+
+### Key Features Implementation
+
+<Steps>
+  <Step title="User Authentication">
+    Implements Django's built-in authentication system with custom user profiles, role-based access control (guest vs. staff), and secure password handling with session management.
+  </Step>
+  
+  <Step title="Booking Engine">
+    Real-time availability checking using PostgreSQL date range queries, automatic price calculation based on nights and room type, and conflict prevention through database constraints.
+  </Step>
+  
+  <Step title="Room Service Integration">
+    JSON-based order storage for flexible menu items, real-time order status updates, and kitchen notification system using Django signals.
+  </Step>
+  
+  <Step title="Admin Dashboard">
+    Custom Django admin interface with advanced filtering, bulk operations for managing multiple reservations, and visual analytics using Chart.js integration.
+  </Step>
+</Steps>
+
+### Security Features
+
+<Warning>
+  **Security Best Practices Implemented:**
+  - CSRF protection on all forms
+  - SQL injection prevention via Django ORM
+  - Password hashing with Django's built-in system
+  - Session-based authentication
+  - Role-based access control
+  - Input validation and sanitization
+</Warning>
+
+## Project Gallery
+
+<Info>
+  The project includes an extensive gallery showcasing:
+  - Homepage with featured rooms
+  - Room browsing interface
+  - Booking flow (date selection → room selection → confirmation)
+  - Guest dashboard
+  - Room service ordering interface
+  - Admin panels for reservation and room management
+  - Mobile-responsive views
+</Info>
+
+The original portfolio includes **21 screenshots** demonstrating the complete user journey from landing page through booking to check-out.
+
+## Links & Resources
+
+<CardGroup cols={2}>
+  <Card title="View on GitHub" icon="github" href="https://github.com/Gabriel071185/Django_Suites_Hotel">
+    Access the complete source code, documentation, and setup instructions
+  </Card>
+  <Card title="Project Gallery" icon="images" href="/projects#django-suites-hotel">
+    View all screenshots and UI examples from the project
+  </Card>
+</CardGroup>
+
+## Development Highlights
+
+<Accordion title="Challenges & Solutions">
+  **Challenge:** Managing concurrent booking requests to prevent double-booking
+  
+  **Solution:** Implemented database-level transactions and row-level locking to ensure only one reservation can be created for a room during overlapping dates.
+  
+  ---
+  
+  **Challenge:** Calculating dynamic pricing based on season, room type, and length of stay
+  
+  **Solution:** Created a flexible pricing engine using Django models with date-based rules and automatic calculation in the booking view.
+  
+  ---
+  
+  **Challenge:** Real-time updates for room service orders
+  
+  **Solution:** Used Django signals to trigger notifications and status updates when orders are modified by kitchen staff.
+</Accordion>
+
+## Learning Outcomes
+
+This project demonstrates proficiency in:
+
+- Django MVT architecture and best practices
+- Complex relational database design
+- User authentication and authorization
+- Form handling and validation
+- Date/time manipulation for booking systems
+- ORM queries and optimization
+- RESTful design patterns
+- Responsive frontend development
+
+<Tip>
+  This project showcases full-stack capabilities with emphasis on backend logic, database design, and user experience in a real-world hospitality management context.
+</Tip>

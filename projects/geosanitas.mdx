@@ -1,0 +1,698 @@
+---
+title: 'Geosanitas'
+description: 'Healthcare facility locator for Córdoba, Argentina with disease information'
+icon: 'map-location-dot'
+---
+
+<Note>
+  **Project Type:** Healthcare Locator Web App | **Status:** Deployed  
+  **Tech Stack:** HTML, CSS, JavaScript, Bootstrap, Vue.js, Maps API  
+  **Live Demo:** [geosanitas.netlify.app](https://geosanitas.netlify.app/)
+</Note>
+
+## Overview
+
+Geosanitas is a public health information platform designed to help residents of Córdoba, Argentina locate healthcare facilities and access reliable medical information. The application combines geolocation services with an educational database of diseases and injuries, serving as a comprehensive health resource for the community.
+
+Built as a frontend-focused web application, Geosanitas demonstrates modern JavaScript frameworks, API integration, and user-centric design for accessibility in healthcare contexts.
+
+<CardGroup cols={2}>
+  <Card title="Facility Locator" icon="hospital">
+    Interactive map showing hospitals, clinics, and healthcare centers across Córdoba
+  </Card>
+  <Card title="Disease Information" icon="book-medical">
+    Comprehensive database of common diseases, symptoms, and treatment information
+  </Card>
+  <Card title="Contact Forms" icon="envelope">
+    Direct communication channels for inquiries and appointment requests
+  </Card>
+  <Card title="Responsive Design" icon="mobile-screen-button">
+    Fully mobile-optimized for access on any device
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Healthcare Facility Locator
+
+<AccordionGroup>
+  <Accordion title="Interactive Mapping">
+    - Real-time map of Córdoba with healthcare facility markers
+    - Facility type filtering (hospitals, clinics, emergency centers)
+    - Distance calculation from user location
+    - Clickable markers with facility details
+    - Directions integration
+    - Street view access
+  </Accordion>
+  
+  <Accordion title="Facility Information">
+    - Name and type of facility
+    - Full address with neighborhood
+    - Contact phone numbers
+    - Operating hours
+    - Available services and specialties
+    - Emergency vs. scheduled care indicators
+    - Public vs. private designation
+  </Accordion>
+  
+  <Accordion title="Search & Filters">
+    - Search by facility name
+    - Filter by facility type
+    - Filter by neighborhood/district
+    - Filter by available services
+    - Sort by distance from current location
+    - List view vs. map view toggle
+  </Accordion>
+</AccordionGroup>
+
+### Medical Information Database
+
+<AccordionGroup>
+  <Accordion title="Disease Directory">
+    - Alphabetical listing of common diseases
+    - Search functionality for quick access
+    - Category-based browsing (infectious, chronic, etc.)
+    - Symptom-based search
+    - Related conditions linking
+  </Accordion>
+  
+  <Accordion title="Detailed Information Pages">
+    - Disease overview and description
+    - Common symptoms and warning signs
+    - Causes and risk factors
+    - Treatment options
+    - Prevention measures
+    - When to seek medical care
+    - Related resources and links
+  </Accordion>
+  
+  <Accordion title="Injury Information">
+    - Common injury types
+    - First aid guidance
+    - When to visit emergency services
+    - Recovery timelines
+    - Rehabilitation information
+  </Accordion>
+</AccordionGroup>
+
+### User Interaction Features
+
+<AccordionGroup>
+  <Accordion title="Contact Forms">
+    - General inquiry form
+    - Appointment request submission
+    - Feedback and suggestions
+    - Report incorrect facility information
+    - Form validation
+    - Confirmation messages
+  </Accordion>
+  
+  <Accordion title="User Experience">
+    - Clean, accessible interface
+    - High contrast for readability
+    - Large tap targets for mobile
+    - Progressive loading
+    - Offline capability for saved information
+    - Multi-language support (Spanish primary)
+  </Accordion>
+</AccordionGroup>
+
+## Technology Stack
+
+<CardGroup cols={3}>
+  <Card title="Frontend" icon="code">
+    **HTML5, CSS3, JavaScript**
+    
+    Semantic HTML structure, modern CSS with flexbox/grid, vanilla JavaScript with ES6+ features
+  </Card>
+  
+  <Card title="Framework" icon="vuejs">
+    **Vue.js & Bootstrap**
+    
+    Vue.js for reactive components, Bootstrap for responsive UI components and grid system
+  </Card>
+  
+  <Card title="APIs" icon="map">
+    **Google Maps API**
+    
+    Maps JavaScript API for interactive maps, Places API for facility data, Geolocation API
+  </Card>
+</CardGroup>
+
+## Technical Implementation
+
+### Map Integration
+
+<Tabs>
+  <Tab title="Map Initialization">
+    ```javascript
+    // Initialize Google Maps with Córdoba as center
+    let map;
+    let markers = [];
+    const cordobaCenter = { lat: -31.4201, lng: -64.1888 };
+    
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: cordobaCenter,
+        zoom: 12,
+        styles: customMapStyles,
+        mapTypeControl: true,
+        streetViewControl: true,
+        fullscreenControl: true
+      });
+      
+      // Get user location if permitted
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            const userLocation = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
+            
+            // Add user marker
+            new google.maps.Marker({
+              position: userLocation,
+              map: map,
+              icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: '#4285F4',
+                fillOpacity: 1,
+                strokeColor: '#fff',
+                strokeWeight: 2
+              },
+              title: 'Tu ubicación'
+            });
+            
+            // Center map on user
+            map.setCenter(userLocation);
+          },
+          () => {
+            // Use default Córdoba center if geolocation denied
+            console.log('Geolocation denied, using default center');
+          }
+        );
+      }
+      
+      // Load healthcare facilities
+      loadFacilities();
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Facility Markers">
+    ```javascript
+    // Healthcare facilities data structure
+    const facilities = [
+      {
+        id: 1,
+        name: 'Hospital de Urgencias',
+        type: 'hospital',
+        address: 'Av. Catamaraca 441',
+        neighborhood: 'Centro',
+        phone: '0351-4342160',
+        coordinates: { lat: -31.4143, lng: -64.1875 },
+        services: ['emergencias', 'traumatología', 'cirugía'],
+        hours: '24 horas',
+        isPublic: true
+      },
+      // More facilities...
+    ];
+    
+    function loadFacilities() {
+      facilities.forEach(facility => {
+        const marker = new google.maps.Marker({
+          position: facility.coordinates,
+          map: map,
+          title: facility.name,
+          icon: getMarkerIcon(facility.type),
+          animation: google.maps.Animation.DROP
+        });
+        
+        // Create info window
+        const infoWindow = new google.maps.InfoWindow({
+          content: createInfoWindowContent(facility)
+        });
+        
+        // Click event
+        marker.addListener('click', () => {
+          // Close other info windows
+          markers.forEach(m => m.infoWindow.close());
+          infoWindow.open(map, marker);
+        });
+        
+        marker.infoWindow = infoWindow;
+        markers.push(marker);
+      });
+    }
+    
+    function getMarkerIcon(type) {
+      const icons = {
+        hospital: {
+          url: 'assets/icons/hospital-marker.png',
+          scaledSize: new google.maps.Size(32, 32)
+        },
+        clinic: {
+          url: 'assets/icons/clinic-marker.png',
+          scaledSize: new google.maps.Size(28, 28)
+        },
+        emergency: {
+          url: 'assets/icons/emergency-marker.png',
+          scaledSize: new google.maps.Size(32, 32)
+        }
+      };
+      return icons[type] || icons.clinic;
+    }
+    
+    function createInfoWindowContent(facility) {
+      return `
+        <div class="facility-info">
+          <h3>${facility.name}</h3>
+          <p><strong>Tipo:</strong> ${facility.type}</p>
+          <p><strong>Dirección:</strong> ${facility.address}</p>
+          <p><strong>Barrio:</strong> ${facility.neighborhood}</p>
+          <p><strong>Teléfono:</strong> ${facility.phone}</p>
+          <p><strong>Horario:</strong> ${facility.hours}</p>
+          <div class="services">
+            <strong>Servicios:</strong>
+            ${facility.services.map(s => `<span class="badge">${s}</span>`).join('')}
+          </div>
+          <div class="actions">
+            <a href="https://maps.google.com/?q=${facility.coordinates.lat},${facility.coordinates.lng}" 
+               target="_blank" class="btn btn-sm btn-primary">
+              Cómo llegar
+            </a>
+          </div>
+        </div>
+      `;
+    }
+    ```
+  </Tab>
+  
+  <Tab title="Filtering">
+    ```javascript
+    // Filter facilities by type and location
+    function filterFacilities(filters) {
+      const { type, neighborhood, service, maxDistance } = filters;
+      
+      markers.forEach(marker => {
+        const facility = facilities.find(f => 
+          f.coordinates.lat === marker.position.lat() &&
+          f.coordinates.lng === marker.position.lng()
+        );
+        
+        let visible = true;
+        
+        // Filter by type
+        if (type && facility.type !== type) {
+          visible = false;
+        }
+        
+        // Filter by neighborhood
+        if (neighborhood && facility.neighborhood !== neighborhood) {
+          visible = false;
+        }
+        
+        // Filter by service
+        if (service && !facility.services.includes(service)) {
+          visible = false;
+        }
+        
+        // Filter by distance from user
+        if (maxDistance && userLocation) {
+          const distance = calculateDistance(
+            userLocation,
+            facility.coordinates
+          );
+          if (distance > maxDistance) {
+            visible = false;
+          }
+        }
+        
+        marker.setVisible(visible);
+      });
+      
+      updateFacilityList();
+    }
+    
+    function calculateDistance(point1, point2) {
+      // Haversine formula for distance calculation
+      const R = 6371; // Earth's radius in km
+      const dLat = toRad(point2.lat - point1.lat);
+      const dLon = toRad(point2.lng - point1.lng);
+      
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(toRad(point1.lat)) * Math.cos(toRad(point2.lat)) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+    
+    function toRad(deg) {
+      return deg * (Math.PI/180);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Vue.js Components
+
+<Tabs>
+  <Tab title="Disease Search Component">
+    ```javascript
+    // Vue component for disease information
+    const DiseaseSearch = {
+      data() {
+        return {
+          searchQuery: '',
+          selectedCategory: 'all',
+          diseases: [],
+          filteredDiseases: []
+        }
+      },
+      computed: {
+        displayedDiseases() {
+          return this.filteredDiseases.filter(disease => {
+            const matchesSearch = disease.name.toLowerCase()
+              .includes(this.searchQuery.toLowerCase());
+            const matchesCategory = this.selectedCategory === 'all' || 
+              disease.category === this.selectedCategory;
+            return matchesSearch && matchesCategory;
+          });
+        }
+      },
+      methods: {
+        async loadDiseases() {
+          try {
+            const response = await fetch('data/diseases.json');
+            this.diseases = await response.json();
+            this.filteredDiseases = this.diseases;
+          } catch (error) {
+            console.error('Error loading diseases:', error);
+          }
+        },
+        selectDisease(disease) {
+          this.$emit('disease-selected', disease);
+        }
+      },
+      mounted() {
+        this.loadDiseases();
+      },
+      template: `
+        <div class="disease-search">
+          <div class="search-bar">
+            <input 
+              v-model="searchQuery" 
+              type="text" 
+              class="form-control"
+              placeholder="Buscar enfermedad o síntoma..."
+            />
+          </div>
+          <div class="category-filters">
+            <button 
+              v-for="category in categories"
+              :key="category.value"
+              :class="['btn', 'btn-outline-primary', { active: selectedCategory === category.value }]"
+              @click="selectedCategory = category.value"
+            >
+              {{ category.label }}
+            </button>
+          </div>
+          <div class="disease-list">
+            <div 
+              v-for="disease in displayedDiseases" 
+              :key="disease.id"
+              class="disease-item"
+              @click="selectDisease(disease)"
+            >
+              <h4>{{ disease.name }}</h4>
+              <p class="symptoms">{{ disease.symptoms.join(', ') }}</p>
+            </div>
+          </div>
+        </div>
+      `
+    };
+    ```
+  </Tab>
+  
+  <Tab title="Contact Form">
+    ```javascript
+    // Contact form component with validation
+    const ContactForm = {
+      data() {
+        return {
+          form: {
+            name: '',
+            email: '',
+            phone: '',
+            subject: '',
+            message: ''
+          },
+          errors: {},
+          submitted: false,
+          sending: false
+        }
+      },
+      methods: {
+        validateForm() {
+          this.errors = {};
+          
+          if (!this.form.name.trim()) {
+            this.errors.name = 'El nombre es requerido';
+          }
+          
+          if (!this.form.email.trim()) {
+            this.errors.email = 'El email es requerido';
+          } else if (!this.isValidEmail(this.form.email)) {
+            this.errors.email = 'Email inválido';
+          }
+          
+          if (!this.form.message.trim()) {
+            this.errors.message = 'El mensaje es requerido';
+          }
+          
+          return Object.keys(this.errors).length === 0;
+        },
+        
+        isValidEmail(email) {
+          const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          return re.test(email);
+        },
+        
+        async submitForm() {
+          if (!this.validateForm()) return;
+          
+          this.sending = true;
+          
+          try {
+            // Submit to backend or email service
+            const response = await fetch('/api/contact', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.form)
+            });
+            
+            if (response.ok) {
+              this.submitted = true;
+              this.resetForm();
+            } else {
+              throw new Error('Failed to submit');
+            }
+          } catch (error) {
+            alert('Error al enviar el formulario. Por favor intente nuevamente.');
+          } finally {
+            this.sending = false;
+          }
+        },
+        
+        resetForm() {
+          this.form = {
+            name: '',
+            email: '',
+            phone: '',
+            subject: '',
+            message: ''
+          };
+        }
+      },
+      template: `
+        <form @submit.prevent="submitForm" class="contact-form">
+          <div v-if="submitted" class="alert alert-success">
+            ¡Mensaje enviado exitosamente! Nos pondremos en contacto pronto.
+          </div>
+          
+          <div class="form-group">
+            <label>Nombre *</label>
+            <input 
+              v-model="form.name" 
+              type="text" 
+              class="form-control"
+              :class="{ 'is-invalid': errors.name }"
+            />
+            <div v-if="errors.name" class="invalid-feedback">{{ errors.name }}</div>
+          </div>
+          
+          <div class="form-group">
+            <label>Email *</label>
+            <input 
+              v-model="form.email" 
+              type="email" 
+              class="form-control"
+              :class="{ 'is-invalid': errors.email }"
+            />
+            <div v-if="errors.email" class="invalid-feedback">{{ errors.email }}</div>
+          </div>
+          
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input v-model="form.phone" type="tel" class="form-control" />
+          </div>
+          
+          <div class="form-group">
+            <label>Asunto</label>
+            <input v-model="form.subject" type="text" class="form-control" />
+          </div>
+          
+          <div class="form-group">
+            <label>Mensaje *</label>
+            <textarea 
+              v-model="form.message" 
+              class="form-control" 
+              rows="5"
+              :class="{ 'is-invalid': errors.message }"
+            ></textarea>
+            <div v-if="errors.message" class="invalid-feedback">{{ errors.message }}</div>
+          </div>
+          
+          <button 
+            type="submit" 
+            class="btn btn-primary"
+            :disabled="sending"
+          >
+            <span v-if="sending">Enviando...</span>
+            <span v-else>Enviar Mensaje</span>
+          </button>
+        </form>
+      `
+    };
+    ```
+  </Tab>
+</Tabs>
+
+## Responsive Design
+
+<CardGroup cols={2}>
+  <Card title="Mobile-First" icon="mobile">
+    Designed with mobile users as the priority, ensuring healthcare information is accessible on smartphones during emergencies
+  </Card>
+  <Card title="Bootstrap Grid" icon="table-cells">
+    Utilizes Bootstrap's responsive grid system for seamless adaptation across screen sizes from mobile to desktop
+  </Card>
+  <Card title="Touch-Friendly" icon="hand-pointer">
+    Large tap targets, swipeable map, and easy-to-use filters optimized for touch interaction
+  </Card>
+  <Card title="Performance" icon="gauge-high">
+    Optimized loading with lazy-loaded images, minimized JavaScript, and efficient map rendering
+  </Card>
+</CardGroup>
+
+## Accessibility Features
+
+<Warning>
+  **Healthcare Accessibility is Critical:**
+  - High contrast color scheme for readability
+  - Clear typography with adequate font sizes
+  - Keyboard navigation support
+  - Screen reader compatible
+  - Simple language for medical information
+  - Emergency contacts prominently displayed
+</Warning>
+
+## Project Gallery
+
+The project showcases **8 comprehensive screenshots** including:
+
+- Homepage with map overview
+- Interactive facility locator with filters
+- Detailed facility information windows
+- Disease information database
+- Individual disease pages
+- Contact form interface
+- Mobile responsive views
+- Map with user location
+
+## Deployment & Access
+
+<CardGroup cols={2}>
+  <Card title="Live Application" icon="globe" href="https://geosanitas.netlify.app/">
+    Access the deployed application on Netlify - fully functional and available 24/7
+  </Card>
+  <Card title="View on GitHub" icon="github" href="https://github.com/Gabriel071185/Geosanitas">
+    Explore the source code, contribute, or fork the project
+  </Card>
+</CardGroup>
+
+<Tip>
+  Geosanitas is deployed on Netlify's edge network, ensuring fast load times and high availability for users accessing healthcare information.
+</Tip>
+
+## Impact & Use Cases
+
+<AccordionGroup>
+  <Accordion title="Emergency Situations">
+    Users experiencing medical emergencies can quickly locate the nearest hospital or emergency center with 24-hour service, view directions, and access contact information.
+  </Accordion>
+  
+  <Accordion title="Health Education">
+    Provides reliable, accessible information about common diseases and injuries, helping users make informed decisions about when to seek medical care.
+  </Accordion>
+  
+  <Accordion title="Healthcare Planning">
+    Enables users to research facilities in advance, compare services offered, and plan appointments at appropriate healthcare centers.
+  </Accordion>
+  
+  <Accordion title="Community Resource">
+    Serves as a centralized directory of Córdoba's healthcare infrastructure, benefiting both residents and visitors to the city.
+  </Accordion>
+</AccordionGroup>
+
+## Technical Highlights
+
+<Steps>
+  <Step title="API Integration">
+    Successfully integrated Google Maps JavaScript API with custom markers, info windows, and geolocation services for real-time facility mapping.
+  </Step>
+  
+  <Step title="Vue.js Architecture">
+    Implemented reactive components for search, filtering, and form handling, demonstrating modern frontend framework proficiency.
+  </Step>
+  
+  <Step title="Responsive Implementation">
+    Achieved seamless mobile experience using Bootstrap's responsive utilities and custom CSS media queries.
+  </Step>
+  
+  <Step title="Data Management">
+    Structured healthcare facility and disease data in JSON format for easy maintenance and updates.
+  </Step>
+</Steps>
+
+## Learning Outcomes
+
+This project demonstrates expertise in:
+
+- Frontend web development with HTML, CSS, and JavaScript
+- Vue.js component architecture and reactivity
+- Bootstrap framework and responsive design
+- Google Maps API integration
+- Geolocation and distance calculation algorithms
+- Form validation and user input handling
+- Accessibility best practices
+- Mobile-first design principles
+- Static site deployment (Netlify)
+- User experience design for public health applications
+
+<Info>
+  Geosanitas showcases frontend development skills with emphasis on practical public service applications, API integration, and user-centric design for accessibility in healthcare contexts.
+</Info>
